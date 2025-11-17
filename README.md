@@ -1,32 +1,56 @@
-# SFA
+# OTun-M Android
 
-Experimental Android client for sing-box, the universal proxy platform.
+**OTun-M** (formerly OXray) is a custom-branded VPN client for Android based on sing-box-for-android.
 
-## Documentation
+## Project Overview
 
-https://sing-box.sagernet.org/installation/clients/sfa/
+- **Original Project**: [sing-box-for-android](https://github.com/SagerNet/sing-box-for-android)
+- **Package Name**: `com.situstechnologies.OXray`
+- **Company**: Situs Technologies LLC
+- **Purpose**: Custom VPN client for use with self-hosted OBox MyCloud servers
+
+## Features
+
+- VLESS + Reality protocol support
+- Shadowsocks protocol support
+- Smart split tunneling
+- Global proxy mode
+- Custom branding and UI
+- Zero-logging, privacy-focused
+
+## Build Requirements
+
+- Android Studio Arctic Fox or later
+- Android SDK 21+
+- JDK 17+
+- Gradle 8.0+
+
+## Building
+```bash
+# Clone the repository
+git clone https://github.com/antsbtw/OTun-M-Android.git
+cd OTun-M-Android
+
+# Build debug APK
+./gradlew assembleOtherDebug
+
+# Install to connected device
+./gradlew installOtherDebug
+```
+
+## Architecture
+
+This app works exclusively with OBox MyCloud self-hosted VPN servers, emphasizing:
+- User control and privacy
+- Self-hosted infrastructure
+- Zero-logging policy
+- Companion system design
 
 ## License
 
-```
-Copyright (C) 2022 by nekohasekai <contact-sagernet@sekai.icu>
+Based on sing-box-for-android which is licensed under GPLv3.
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+## Credits
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program. If not, see <http://www.gnu.org/licenses/>.
-
-In addition, no derivative work may use the name or imply association
-with this application without prior consent.
-```
-
-Under the license, that forks of the app are not allowed to be listed on F-Droid or other app stores
-under the original name.
+- Original sing-box project by SagerNet
+- Modified and branded by Situs Technologies LLC

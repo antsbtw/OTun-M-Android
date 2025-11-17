@@ -112,29 +112,29 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="io.nekohasekai.sfa.ui.profile.NewProfileActivity"
+            android:name="com.situstechnologies.OXray.ui.profile.NewProfileActivity"
             android:exported="false" />
         <activity
-            android:name="io.nekohasekai.sfa.ui.profile.EditProfileActivity"
+            android:name="com.situstechnologies.OXray.ui.profile.EditProfileActivity"
             android:exported="false" />
         <activity
-            android:name="io.nekohasekai.sfa.ui.profile.EditProfileContentActivity"
+            android:name="com.situstechnologies.OXray.ui.profile.EditProfileContentActivity"
             android:exported="false" />
         <activity
-            android:name="io.nekohasekai.sfa.ui.profileoverride.ProfileOverrideActivity"
+            android:name="com.situstechnologies.OXray.ui.profileoverride.ProfileOverrideActivity"
             android:exported="false" />
         <activity
-            android:name="io.nekohasekai.sfa.ui.profileoverride.PerAppProxyActivity"
+            android:name="com.situstechnologies.OXray.ui.profileoverride.PerAppProxyActivity"
             android:exported="false" />
         <activity
-            android:name="io.nekohasekai.sfa.ui.debug.DebugActivity"
+            android:name="com.situstechnologies.OXray.ui.debug.DebugActivity"
             android:exported="false" />
         <activity
-            android:name="io.nekohasekai.sfa.ui.debug.VPNScanActivity"
+            android:name="com.situstechnologies.OXray.ui.debug.VPNScanActivity"
             android:exported="false" />
 
         <activity
-            android:name="io.nekohasekai.sfa.ui.profile.QRScanActivity"
+            android:name="com.situstechnologies.OXray.ui.profile.QRScanActivity"
             android:exported="false" />
 
         <service
