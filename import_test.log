@@ -1,0 +1,52 @@
+11-18 03:34:33.426 10566 10566 I ImportHandler: Parsing import URL
+11-18 03:34:33.427 10566 10566 D ImportHandler: Encrypted parameter extracted, length: 412
+11-18 03:34:33.435 10566 10566 I ImportHandler: Encrypted payload parsed successfully
+11-18 03:34:33.435 10566 10566 I ImportViewModel: Valid encrypted payload detected, awaiting password
+11-18 03:34:55.934 10566 10566 I ImportViewModel: Starting import process
+11-18 03:34:55.938 10566 10602 I ImportHandler: Starting configuration import process
+11-18 03:34:55.938 10566 10602 D ImportHandler: Decrypting configuration...
+11-18 03:34:55.939 10566 10602 I ConfigurationCrypto: Starting configuration decryption process
+11-18 03:34:55.939 10566 10602 D ConfigurationCrypto: Payload version: 1.0
+11-18 03:34:55.939 10566 10602 D ConfigurationCrypto: === Decryption Debug Info ===
+11-18 03:34:55.939 10566 10602 D ConfigurationCrypto: Password: tea*** (length: 12)
+11-18 03:34:55.939 10566 10602 D ConfigurationCrypto: Salt length: 32 bytes
+11-18 03:34:55.940 10566 10602 D ConfigurationCrypto: Nonce length: 12 bytes
+11-18 03:34:55.940 10566 10602 D ConfigurationCrypto: EncryptedData length: 96 bytes
+11-18 03:34:55.940 10566 10602 D ConfigurationCrypto: AuthTag length: 16 bytes
+11-18 03:34:55.940 10566 10602 D ConfigurationCrypto: ===========================
+11-18 03:34:55.940 10566 10602 D ConfigurationCrypto: Base64 decoding successful
+11-18 03:34:55.940 10566 10602 D ConfigurationCrypto: Starting HKDF key derivation
+11-18 03:34:55.941 10566 10602 D ConfigurationCrypto: HKDF key derivation successful
+11-18 03:34:55.941 10566 10602 D ConfigurationCrypto: Key derivation successful
+11-18 03:34:55.942 10566 10602 D ConfigurationCrypto: AES-GCM decryption successful (Size: 96 bytes)
+11-18 03:34:55.942 10566 10602 D ConfigurationCrypto: RAW Decrypted String:
+11-18 03:34:55.942 10566 10602 D ConfigurationCrypto: ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTp6QXRKbXd0c1ZSd0tzc2x3WWhJZE9o@157.245.81.66:62600/?outline=1
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: Decryption error: Unexpected JSON token at offset 0: Expected start of the object '{', but had 's' instead at path: $
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: JSON input: ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTp6QXRKbXd0c1ZSd0tzc2x3WWhJZE9o@157.245.81.66:62600/?outline=1
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: kotlinx.serialization.json.internal.JsonDecodingException: Unexpected JSON token at offset 0: Expected start of the object '{', but had 's' instead at path: $
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: JSON input: ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTp6QXRKbXd0c1ZSd0tzc2x3WWhJZE9o@157.245.81.66:62600/?outline=1
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: 	at kotlinx.serialization.json.internal.JsonExceptionsKt.JsonDecodingException(JsonExceptions.kt:24)
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: 	at kotlinx.serialization.json.internal.JsonExceptionsKt.JsonDecodingException(JsonExceptions.kt:32)
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: 	at kotlinx.serialization.json.internal.AbstractJsonLexer.fail(AbstractJsonLexer.kt:580)
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: 	at kotlinx.serialization.json.internal.AbstractJsonLexer.fail$default(AbstractJsonLexer.kt:578)
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: 	at kotlinx.serialization.json.internal.AbstractJsonLexer.fail$kotlinx_serialization_json(AbstractJsonLexer.kt:231)
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: 	at kotlinx.serialization.json.internal.AbstractJsonLexer.fail$kotlinx_serialization_json$default(AbstractJsonLexer.kt:226)
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: 	at kotlinx.serialization.json.internal.AbstractJsonLexer.unexpectedToken(AbstractJsonLexer.kt:223)
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: 	at kotlinx.serialization.json.internal.StringJsonLexer.consumeNextToken(StringJsonLexer.kt:76)
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: 	at kotlinx.serialization.json.internal.StreamingJsonDecoder.beginStructure(StreamingJsonDecoder.kt:102)
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: 	at com.situstechnologies.OXray.data.config.CompactShareableConfig$$serializer.deserialize(CompactShareableConfig.kt:15)
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: 	at com.situstechnologies.OXray.data.config.CompactShareableConfig$$serializer.deserialize(CompactShareableConfig.kt:15)
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: 	at kotlinx.serialization.json.internal.StreamingJsonDecoder.decodeSerializableValue(StreamingJsonDecoder.kt:69)
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: 	at kotlinx.serialization.json.Json.decodeFromString(Json.kt:165)
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: 	at com.situstechnologies.OXray.data.crypto.ConfigurationCrypto.decryptConfig(ConfigurationCrypto.kt:301)
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: 	at com.situstechnologies.OXray.data.Oimport.ImportHandler$importConfiguration$2.invokeSuspend(ImportHandler.kt:157)
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: 	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: 	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:124)
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: 	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:89)
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: 	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:586)
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:820)
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:717)
+11-18 03:34:55.946 10566 10602 E ConfigurationCrypto: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:704)
+11-18 03:34:55.946 10566 10602 E ImportHandler: Crypto error: Invalid share password
+11-18 03:34:55.982 10566 10566 E ImportViewModel: Import failed: Failed to decrypt configuration. Check your password.

@@ -1,0 +1,279 @@
+package com.situstechnologies.OXray.data.crypto
+
+import android.util.Base64
+import android.util.Log
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
+import java.security.SecureRandom
+import javax.crypto.Cipher
+import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.SecretKeySpec
+import javax.crypto.Mac
+import javax.crypto.spec.IvParameterSpec
+import com.situstechnologies.OXray.data.config.CompactShareableConfig
+
+/**
+ * Encrypted payload for configuration sharing
+ * Uses AES-GCM encryption with HKDF key derivation
+ *
+ * Ported from iOS EncryptedSharePayload.swift
+ */
+@Serializable
+data class EncryptedSharePayload(
+    @SerialName("encryptedData")
+    val encryptedData: String,    // Base64 encoded encrypted data
+
+    @SerialName("salt")
+    val salt: String,              // Base64 encoded salt
+
+    @SerialName("nonce")
+    val nonce: String,             // Base64 encoded nonce (IV)
+
+    @SerialName("authTag")
+    val authTag: String,           // Base64 encoded authentication tag
+
+    @SerialName("version")
+    val version: String,           // Encryption version
+
+    @SerialName("timestamp")
+    val timestamp: Double            // Creation timestamp (matches iOS TimeInterval)// Creation timestamp
+) {
+    companion object {
+        private const val TAG = "EncryptedSharePayload"
+
+        /**
+         * Create payload from URL-safe string
+         */
+        fun fromUrlSafeString(urlSafeString: String): EncryptedSharePayload {
+            Log.d(TAG, "Parsing encrypted payload from URL-safe string")
+
+            // Restore Base64 padding
+            var base64String = urlSafeString
+                .replace("-", "+")
+                .replace("_", "/")
+
+            val padLength = (4 - base64String.length % 4) % 4
+            base64String += "=".repeat(padLength)
+
+            val jsonData = Base64.decode(base64String, Base64.DEFAULT)
+            val jsonString = String(jsonData, Charsets.UTF_8)
+
+            return Json.decodeFromString(jsonString)
+        }
+    }
+
+    /**
+     * Convert to URL-safe string for sharing
+     */
+    fun toUrlSafeString(): String {
+        val jsonString = Json.encodeToString(this)
+        val jsonData = jsonString.toByteArray(Charsets.UTF_8)
+        val base64String = Base64.encodeToString(jsonData, Base64.NO_WRAP)
+
+        // Convert to URL-safe Base64
+        return base64String
+            .replace("+", "-")
+            .replace("/", "_")
+            .replace("=", "")
+    }
+}
+
+/**
+ * Configuration encryption errors
+ */
+sealed class ConfigurationCryptoError : Exception() {
+    object EncryptionFailed : ConfigurationCryptoError() {
+        override val message = "Configuration encryption failed"
+    }
+
+    object DecryptionFailed : ConfigurationCryptoError() {
+        override val message = "Configuration decryption failed"
+    }
+
+    object InvalidPassword : ConfigurationCryptoError() {
+        override val message = "Invalid share password"
+    }
+
+    object ExpiredConfig : ConfigurationCryptoError() {
+        override val message = "Configuration has expired"
+    }
+
+    object InvalidFormat : ConfigurationCryptoError() {
+        override val message = "Invalid configuration format"
+    }
+
+    object CorruptedData : ConfigurationCryptoError() {
+        override val message = "Configuration data is corrupted"
+    }
+}
+
+/**
+ * Configuration encryption/decryption implementation
+ * Uses AES-256-GCM with HKDF key derivation
+ *
+ * Ported from iOS ConfigurationCrypto
+ */
+object ConfigurationCrypto {
+    private const val TAG = "ConfigurationCrypto"
+    private const val AES_KEY_SIZE = 32  // 256 bits
+    private const val GCM_NONCE_SIZE = 12  // 96 bits
+    private const val GCM_TAG_SIZE = 16  // 128 bits
+    private const val SALT_SIZE = 32  // 256 bits
+
+    private val json = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+    }
+
+    /**
+     * Encrypt configuration for sharing
+     */
+    fun encryptConfig(config: CompactShareableConfig, password: String): EncryptedSharePayload {
+        Log.i(TAG, "Starting configuration encryption process")
+
+        try {
+            // 1. Encode to JSON
+            val jsonString = json.encodeToString(config)
+            val jsonData = jsonString.toByteArray(Charsets.UTF_8)
+            Log.d(TAG, "JSON encoding successful, size: ${jsonData.size} bytes")
+
+            // Debug: Log original config
+            Log.d(TAG, "ORIGINAL Config JSON:\n$jsonString")
+
+            // 2. Generate salt
+            val salt = ByteArray(SALT_SIZE)
+            SecureRandom().nextBytes(salt)
+
+            // 3. Derive key using HKDF
+            val key = deriveKey(password, salt)
+            Log.d(TAG, "Key derivation successful")
+
+            // 4. Generate nonce
+            val nonce = ByteArray(GCM_NONCE_SIZE)
+            SecureRandom().nextBytes(nonce)
+
+            // 5. AES-GCM encryption
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            val gcmSpec = GCMParameterSpec(GCM_TAG_SIZE * 8, nonce)
+            cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key, "AES"), gcmSpec)
+
+            val encryptedBytes = cipher.doFinal(jsonData)
+
+            // Extract ciphertext and tag
+            val ciphertext = encryptedBytes.copyOfRange(0, encryptedBytes.size - GCM_TAG_SIZE)
+            val authTag = encryptedBytes.copyOfRange(encryptedBytes.size - GCM_TAG_SIZE, encryptedBytes.size)
+
+            Log.d(TAG, "AES-GCM encryption successful")
+
+            // 6. Create payload
+            val payload = EncryptedSharePayload(
+                encryptedData = Base64.encodeToString(ciphertext, Base64.NO_WRAP),
+                salt = Base64.encodeToString(salt, Base64.NO_WRAP),
+                nonce = Base64.encodeToString(nonce, Base64.NO_WRAP),
+                authTag = Base64.encodeToString(authTag, Base64.NO_WRAP),
+                version = "1.0",
+                timestamp = System.currentTimeMillis() / 1000.0
+            )
+
+            // Debug: Log encrypted payload
+            val payloadJson = json.encodeToString(payload)
+            Log.d(TAG, "FULL Encrypted Payload JSON:\n$payloadJson")
+
+            Log.i(TAG, "Configuration encryption completed successfully")
+            return payload
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Encryption error: ${e.message}", e)
+            throw ConfigurationCryptoError.EncryptionFailed
+        }
+    }
+
+    /**
+     * Decrypt configuration from share
+     */
+    fun decryptConfig(payload: EncryptedSharePayload, password: String): CompactShareableConfig {
+        Log.i(TAG, "Starting configuration decryption process")
+        Log.d(TAG, "Payload version: ${payload.version}")
+
+        try {
+            // 1. Decode Base64 data
+            val encryptedData = Base64.decode(payload.encryptedData, Base64.DEFAULT)
+            val salt = Base64.decode(payload.salt, Base64.DEFAULT)
+            val nonce = Base64.decode(payload.nonce, Base64.DEFAULT)
+            val authTag = Base64.decode(payload.authTag, Base64.DEFAULT)
+
+            Log.d(TAG, "Base64 decoding successful")
+
+            // 2. Derive key using HKDF
+            val key = deriveKey(password, salt)
+            Log.d(TAG, "Key derivation successful")
+
+            // 3. AES-GCM decryption
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            val gcmSpec = GCMParameterSpec(GCM_TAG_SIZE * 8, nonce)
+            cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), gcmSpec)
+
+            // Combine ciphertext and auth tag
+            val combined = encryptedData + authTag
+            val decryptedData = cipher.doFinal(combined)
+
+            val decryptedString = String(decryptedData, Charsets.UTF_8)
+            Log.d(TAG, "AES-GCM decryption successful (Size: ${decryptedData.size} bytes)")
+
+            // Debug: Log decrypted data
+            Log.d(TAG, "RAW Decrypted String:\n$decryptedString")
+
+            // 4. Parse and check for test_config
+            val compactConfig = json.decodeFromString<CompactShareableConfig>(decryptedString)
+
+            // Check if it's a test account
+            // (Test mode detection will be handled by TestModeStorage in Android)
+
+            // 5. Check expiration
+            if (compactConfig.isExpired) {
+                Log.w(TAG, "Configuration has expired")
+                throw ConfigurationCryptoError.ExpiredConfig
+            }
+
+            Log.i(TAG, "Configuration decryption completed successfully")
+            return compactConfig
+
+        } catch (e: ConfigurationCryptoError) {
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "Decryption error: ${e.message}", e)
+            throw ConfigurationCryptoError.InvalidPassword
+        }
+    }
+
+    /**
+     * Derive encryption key using HKDF-SHA256
+     */
+    private fun deriveKey(password: String, salt: ByteArray): ByteArray {
+        Log.d(TAG, "Starting HKDF key derivation")
+
+        val passwordBytes = password.toByteArray(Charsets.UTF_8)
+
+        // HKDF-Extract: PRK = HMAC-SHA256(salt, IKM)
+        val extractMac = Mac.getInstance("HmacSHA256")
+        extractMac.init(SecretKeySpec(salt, "HmacSHA256"))
+        val prk = extractMac.doFinal(passwordBytes)
+
+        // HKDF-Expand: OKM = HMAC-SHA256(PRK, info | 0x01)
+        val expandMac = Mac.getInstance("HmacSHA256")
+        expandMac.init(SecretKeySpec(prk, "HmacSHA256"))
+        expandMac.update(ByteArray(0))  // Empty info
+        expandMac.update(byteArrayOf(0x01))
+        val okm = expandMac.doFinal()
+
+        // Take first 32 bytes for AES-256
+        val key = okm.copyOf(AES_KEY_SIZE)
+
+        Log.d(TAG, "HKDF key derivation successful")
+        return key
+    }
+}

@@ -54,12 +54,15 @@
                 android:name="firebase_crashlytics_collection_enabled"
                 android:value="false" />
 
+            <!-- 临时注释掉这个 intent-filter -->
+            <!--
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            -->
 
+            <!-- 保留其他 intent-filter -->
 
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -97,6 +100,17 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
             </intent-filter>
 
+        </activity>
+
+        <activity
+            android:name=".ui.ComposeMainActivity"
+            android:exported="true"
+            android:label="OTun-M (New)"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
         </activity>
 
         <activity
