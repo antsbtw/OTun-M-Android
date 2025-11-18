@@ -20,6 +20,7 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <uses-permission
         android:name="android.permission.QUERY_ALL_PACKAGES"
@@ -55,13 +56,13 @@
                 android:value="false" />
 
             <!-- 临时注释掉这个 intent-filter -->
-            <!--
+<!--
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            -->
 
+-->
             <!-- 保留其他 intent-filter -->
 
             <intent-filter>
@@ -95,22 +96,22 @@
                 <data android:pathPattern="/.*\\..*\\.bpf" />
                 <data android:pathPattern="/.*\\.bpf" />
             </intent-filter>
-
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
             </intent-filter>
-
         </activity>
 
         <activity
             android:name=".ui.ComposeMainActivity"
             android:exported="true"
-            android:label="OTun-M (New)"
+            android:label="OTun-M"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
         </activity>
 
         <activity

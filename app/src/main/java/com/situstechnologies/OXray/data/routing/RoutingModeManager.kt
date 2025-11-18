@@ -120,6 +120,7 @@ class RoutingModeManager(private val context: Context) {
             RoutingMode.GLOBAL -> {
                 Log.i(TAG, "Applying global proxy rules")
                 buildJsonArray {
+                    // 只保留 DNS 劫持，所有流量走代理
                     add(buildJsonObject {
                         put("protocol", "dns")
                         put("action", "hijack-dns")
@@ -130,18 +131,22 @@ class RoutingModeManager(private val context: Context) {
             RoutingMode.SMART -> {
                 Log.i(TAG, "Applying smart routing rules")
                 buildJsonArray {
+                    // DNS 劫持
                     add(buildJsonObject {
                         put("protocol", "dns")
                         put("action", "hijack-dns")
                     })
+                    // 国内网站直连
                     add(buildJsonObject {
                         put("rule_set", "geosite-cn")
                         put("outbound", "direct")
                     })
+                    // 国内 IP 直连
                     add(buildJsonObject {
                         put("rule_set", "geoip-cn")
                         put("outbound", "direct")
                     })
+                    // 私有 IP 直连
                     add(buildJsonObject {
                         put("ip_is_private", true)
                         put("outbound", "direct")
@@ -150,12 +155,13 @@ class RoutingModeManager(private val context: Context) {
             }
         }
 
+        // 👇 关键修改：保留 route 中的所有字段，只替换 rules
         val newRoute = buildJsonObject {
             route.entries.forEach { (key, value) ->
                 if (key == "rules") {
-                    put(key, newRules)
+                    put(key, newRules)  // 只替换 rules
                 } else {
-                    put(key, value)
+                    put(key, value)  // 保留其他字段（final, rule_set 等）
                 }
             }
         }

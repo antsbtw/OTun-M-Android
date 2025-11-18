@@ -9,7 +9,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-
+import com.situstechnologies.OXray.database.Profile
+import com.situstechnologies.OXray.database.ProfileManager
+import com.situstechnologies.OXray.database.TypedProfile
+import java.util.Date
 /**
  * Import ViewModel
  * Manages configuration import process
@@ -96,10 +99,24 @@ class ImportViewModel(application: Application) : AndroidViewModel(application) 
                 payload = payload,
                 password = password,
                 onProfileCreated = { name, path ->
-                    // TODO: Create Profile in database
-                    // ProfileManager.create(Profile(name = name, path = path))
-                    Log.i(TAG, "Profile created: $name at $path")
-                    1L // Return fake profile ID
+                    // 创建 TypedProfile
+                    val typedProfile = TypedProfile().apply {
+                        this.type = TypedProfile.Type.Local
+                        this.path = path
+                        this.lastUpdated = java.util.Date()
+                    }
+
+                    // 创建 Profile
+                    val profile = Profile(
+                        userOrder = ProfileManager.nextOrder(),
+                        name = name,
+                        typed = typedProfile
+                    )
+
+                    // 保存到数据库
+                    val savedProfile = ProfileManager.create(profile)
+                    Log.i(TAG, "✅ Profile saved to database: ${savedProfile.name} (ID: ${savedProfile.id})")
+                    savedProfile.id
                 }
             )) {
                 is ImportHandler.ImportResult.Success -> {

@@ -93,6 +93,10 @@ class ImportHandler(private val context: Context) {
         object DatabaseError : ImportError() {
             override val message = "Failed to save configuration to database"
         }
+        // 👇 添加这个
+        object TestAccountAlreadyActivated : ImportError() {
+            override val message = "This test account has already been activated and cannot be used again."
+        }
     }
 
     /**
@@ -147,7 +151,7 @@ class ImportHandler(private val context: Context) {
     suspend fun importConfiguration(
         payload: EncryptedSharePayload,
         password: String,
-        onProfileCreated: suspend (String, String) -> Long  // (name, path) -> profileId
+        onProfileCreated: suspend (String, String) -> Long
     ): ImportResult = withContext(Dispatchers.IO) {
         Log.i(TAG, "Starting configuration import process")
 
@@ -157,53 +161,119 @@ class ImportHandler(private val context: Context) {
             val compactConfig = ConfigurationCrypto.decryptConfig(payload, password)
             Log.i(TAG, "Configuration decrypted successfully")
 
+            // 🔍 添加调试：打印解密后的配置详情
+            Log.d(TAG, "=== Compact Config Details ===")
+            Log.d(TAG, "Template ID: ${compactConfig.templateId}")
+            Log.d(TAG, "Display Name: ${compactConfig.displayName}")
+            Log.d(TAG, "Share ID: ${compactConfig.shareId}")
+            Log.d(TAG, "Created At: ${compactConfig.createdAt}")
+            Log.d(TAG, "Expiration: ${compactConfig.expirationDate}")
+            Log.d(TAG, "Is Expired: ${compactConfig.isExpired}")
+            Log.d(TAG, "Server Params: ${compactConfig.serverParams}")
+       //     Log.d(TAG, "Test Config: ${compactConfig.testConfig}")
+            Log.d(TAG, "=============================")
+
             // 2. Check expiration
             if (compactConfig.isExpired) {
                 Log.w(TAG, "Configuration has expired")
                 return@withContext ImportResult.Failure(ImportError.ConfigurationExpired)
             }
 
-            // 3. Generate full sing-box configuration from template
-            Log.d(TAG, "Generating full configuration from template: ${compactConfig.templateId}")
-            val fullConfigJSON = ConfigTemplateManager.generateFullConfig(compactConfig)
-            Log.i(TAG, "Full configuration generated, size: ${fullConfigJSON.length} bytes")
-
-            // 4. Save configuration to file
-            Log.d(TAG, "Saving configuration to file...")
-            val configPath = saveConfigurationToFile(fullConfigJSON, compactConfig.displayName)
-            Log.i(TAG, "Configuration saved to: $configPath")
-
-            // 5. Create Profile record (delegated to caller)
-            val profileId = onProfileCreated(compactConfig.displayName, configPath)
-            Log.i(TAG, "Profile created successfully with ID: $profileId")
-
-            // 6. Check if it's a test account
+        // 👇 新增：2.5. 检查测试账号防重复激活
             val testModeStorage = TestModeStorage.getInstance(context)
-            val testRecord = testModeStorage.getRecord(compactConfig.displayName)
 
-            if (testRecord != null) {
-                Log.i(TAG, "✅ Test mode - Will expire at: ${testRecord.expiresAt}")
-                Log.i(TAG, "⏰ Remaining time: ${testRecord.remainingMinutes} minutes")
-            } else {
-                Log.i(TAG, "ℹ️ Regular account (no expiration)")
+            if (compactConfig.testConfig != null) {
+                Log.i(TAG, "🧪 Detected test account (Duration: ${compactConfig.testConfig.testDurationMinutes} minutes)")
+
+                // 检查此 shareId 是否已激活过
+                val existingRecord = testModeStorage.getRecordByShareId(compactConfig.shareId)
+
+                if (existingRecord != null) {
+                    Log.w(TAG, "❌ Test account already activated!")
+                    Log.w(TAG, "   ShareID: ${compactConfig.shareId}")
+                    Log.w(TAG, "   Previously activated at: ${java.util.Date(existingRecord.activatedAt)}")
+
+                    // 👇 改为使用定义好的错误类型
+                    return@withContext ImportResult.Failure(ImportError.TestAccountAlreadyActivated)
+                }
+
+                Log.i(TAG, "✅ First-time activation for this test account")
             }
 
-            return@withContext ImportResult.Success(compactConfig.displayName)
+            // 3. Generate full sing-box configuration from template
+            Log.d(TAG, "Generating full configuration from template: ${compactConfig.templateId}")
+
+            // 🔍 添加调试：检查模板是否存在
+            try {
+                val fullConfigJSON = ConfigTemplateManager.generateFullConfig(compactConfig)
+                Log.i(TAG, "✅ Full configuration generated successfully")
+                Log.d(TAG, "Config size: ${fullConfigJSON.length} bytes")
+                Log.d(TAG, "Config preview (first 200 chars): ${fullConfigJSON.take(200)}")
+
+                // 4. Save configuration to file
+                Log.d(TAG, "Saving configuration to file...")
+                val configPath = saveConfigurationToFile(fullConfigJSON, compactConfig.displayName)
+                Log.i(TAG, "Configuration saved to: $configPath")
+
+                // 5. Create Profile record
+                val profileId = onProfileCreated(compactConfig.displayName, configPath)
+                Log.i(TAG, "Profile created successfully with ID: $profileId")
+
+                // 👇 修改：保存测试账号记录
+                if (compactConfig.testConfig != null) {
+                    val testConfig = compactConfig.testConfig
+                    val now = System.currentTimeMillis()
+
+                    val testRecord = TestModeRecord(
+                        shareId = compactConfig.shareId,
+                        activatedAt = now,
+                        expiresAt = now + (testConfig.testDurationMinutes * 60 * 1000L),
+                        configName = compactConfig.displayName,
+                        testDurationMinutes = testConfig.testDurationMinutes
+                    )
+
+                    testModeStorage.saveRecord(testRecord)
+
+                    Log.i(TAG, "🧪 Test account record saved")
+                    Log.i(TAG, "   Duration: ${testConfig.testDurationMinutes} minutes")
+                    Log.i(TAG, "   Expires at: ${java.util.Date(testRecord.expiresAt)}")
+                    Log.i(TAG, "   ShareID locked: ${compactConfig.shareId}")
+                } else {
+                    Log.i(TAG, "ℹ️ Regular account (no expiration)")
+                }
+
+                return@withContext ImportResult.Success(compactConfig.displayName)
+
+            } catch (templateError: Exception) {
+                // 🔍 添加调试：捕获模板生成的具体错误
+                Log.e(TAG, "❌ Template generation failed!")
+                Log.e(TAG, "Error type: ${templateError::class.simpleName}")
+                Log.e(TAG, "Error message: ${templateError.message}")
+                Log.e(TAG, "Stack trace:", templateError)
+
+                // 检查是否是找不到模板
+                if (templateError.message?.contains("not found", ignoreCase = true) == true ||
+                    templateError.message?.contains("unknown template", ignoreCase = true) == true) {
+                    Log.e(TAG, "⚠️ Template '${compactConfig.templateId}' not found in ConfigTemplateManager")
+                }
+
+                return@withContext ImportResult.Failure(ImportError.InvalidTemplate)
+            }
 
         } catch (e: ConfigurationCryptoError) {
             Log.e(TAG, "Crypto error: ${e.message}")
-
             val error = when (e) {
                 is ConfigurationCryptoError.InvalidPassword -> ImportError.DecryptionFailed
                 is ConfigurationCryptoError.ExpiredConfig -> ImportError.ConfigurationExpired
                 is ConfigurationCryptoError.InvalidFormat -> ImportError.InvalidTemplate
                 else -> ImportError.DecryptionFailed
             }
-
             return@withContext ImportResult.Failure(error)
 
         } catch (e: Exception) {
-            Log.e(TAG, "Unknown error: ${e.message}", e)
+            Log.e(TAG, "Unknown error during import", e)
+            Log.e(TAG, "Error type: ${e::class.simpleName}")
+            Log.e(TAG, "Error message: ${e.message}")
             return@withContext ImportResult.Failure(ImportError.DatabaseError)
         }
     }

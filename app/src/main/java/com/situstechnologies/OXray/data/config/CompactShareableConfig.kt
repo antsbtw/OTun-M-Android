@@ -3,8 +3,8 @@ package com.situstechnologies.OXray.data.config
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
-import java.util.Date
-import java.util.UUID
+import java.text.SimpleDateFormat
+import java.util.*
 
 /**
  * Compact shareable configuration for efficient QR code sharing
@@ -37,13 +37,17 @@ data class CompactShareableConfig(
     @SerialName("share_id")
     val shareId: String = UUID.randomUUID().toString(),
 
-    /** Creation timestamp (epoch seconds) */
+    /** Creation timestamp (ISO 8601 format from iOS) */
     @SerialName("created_at")
-    val createdAt: Long = System.currentTimeMillis() / 1000,
+    val createdAt: String,
 
-    /** Expiration timestamp (null = never expires) */
+    /** Expiration timestamp (ISO 8601 format, null = never expires) */
     @SerialName("expiration_date")
-    val expirationDate: Long? = null,
+    val expirationDate: String? = null,
+
+    /** Test configuration (for time-limited test accounts) */
+    @SerialName("test_config")
+    val testConfig: TestConfig? = null,
 
     // MARK: - Advanced Overrides (Optional)
 
@@ -61,7 +65,15 @@ data class CompactShareableConfig(
     @Transient
     val isExpired: Boolean
         get() = expirationDate?.let {
-            (System.currentTimeMillis() / 1000) > it
+            try {
+                val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+                    timeZone = TimeZone.getTimeZone("UTC")
+                }
+                val expiryDate = sdf.parse(it)
+                expiryDate != null && Date().after(expiryDate)
+            } catch (e: Exception) {
+                false
+            }
         } ?: false
 
     /**
@@ -71,3 +83,16 @@ data class CompactShareableConfig(
     val displayName: String
         get() = configName ?: "${serverParams.server}:${serverParams.serverPort}"
 }
+
+/**
+ * Test configuration for time-limited accounts
+ */
+@Serializable
+data class TestConfig(
+    /** Test type (e.g., "test") */
+    val type: String,
+
+    /** Test duration in minutes */
+    @SerialName("test_duration_minutes")
+    val testDurationMinutes: Int
+)

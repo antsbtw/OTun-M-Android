@@ -1,6 +1,7 @@
 package com.situstechnologies.OXray.data.config
 
 import android.util.Log
+import com.google.gson.Gson
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -74,7 +75,8 @@ enum class ConfigTemplate(val templateId: String) {
             "inbounds" to listOf(
                 mapOf(
                     "type" to "tun",
-                    "address" to listOf("198.18.0.1/16"),
+                    "address" to "198.18.0.1/16",  // 👈 改用 inet4_address
+                    "mtu" to 9000,  // 👈 添加 mtu
                     "auto_route" to true,
                     "strict_route" to true,
                     "sniff" to true,
@@ -325,15 +327,26 @@ object ConfigTemplateManager {
         // 2. Get template
         val template = ConfigTemplate.fromId(compactConfig.templateId)
 
-        // 3. Apply parameters
-        var config = template.applyParameters(compactConfig.serverParams)
+        // 3. Apply parameters - 返回 Map<String, Any>
+        val configMap = template.applyParameters(compactConfig.serverParams)
 
-        // 4. Apply overrides if present
+        // 4. 简单方法：先序列化为 JSON 字符串，再解析为 JsonObject
+        val gson = com.google.gson.Gson()
+        val tempJson = gson.toJson(configMap)
+        var config = json.parseToJsonElement(tempJson) as JsonObject
+
+        // 5. Apply overrides if present
         compactConfig.dnsOverride?.let { dnsJson ->
             try {
                 val dnsOverride = json.parseToJsonElement(dnsJson)
-                config = config.toMutableMap().apply {
-                    this["dns"] = dnsOverride
+                config = buildJsonObject {
+                    config.forEach { (key, value) ->
+                        if (key == "dns") {
+                            put(key, dnsOverride)
+                        } else {
+                            put(key, value)
+                        }
+                    }
                 }
                 Log.d(TAG, "Applied DNS override")
             } catch (e: Exception) {
@@ -344,8 +357,14 @@ object ConfigTemplateManager {
         compactConfig.routeOverride?.let { routeJson ->
             try {
                 val routeOverride = json.parseToJsonElement(routeJson)
-                config = config.toMutableMap().apply {
-                    this["route"] = routeOverride
+                config = buildJsonObject {
+                    config.forEach { (key, value) ->
+                        if (key == "route") {
+                            put(key, routeOverride)
+                        } else {
+                            put(key, value)
+                        }
+                    }
                 }
                 Log.d(TAG, "Applied route override")
             } catch (e: Exception) {
@@ -353,11 +372,8 @@ object ConfigTemplateManager {
             }
         }
 
-        // 5. Convert to JSON string
-        val configJson = json.encodeToString(
-            kotlinx.serialization.serializer(),
-            config
-        )
+        // 6. Convert to JSON string
+        val configJson = json.encodeToString(JsonObject.serializer(), config)
 
         Log.i(TAG, "Full configuration generated successfully, size: ${configJson.length} bytes")
         return configJson

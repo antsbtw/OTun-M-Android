@@ -119,35 +119,32 @@ fun SimplifiedDashboardScreen(
         }
     }
 
-    // Test Mode Expiry Alert
-    if (uiState.showTestExpiryAlert) {
+    // 👇 改为 viewModel
+    if (uiState.showServiceAlert) {
         AlertDialog(
-            onDismissRequest = { viewModel.dismissTestExpiryAlert() },
-            title = { Text("Test Account") },
-            text = { Text(uiState.testExpiryMessage) },
+            onDismissRequest = { viewModel.dismissServiceAlert() },  // ✅
+            title = {
+                Text(
+                    "连接错误",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    uiState.serviceAlertMessage,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
             confirmButton = {
-                if (uiState.testExpiryMessage.contains("expired")) {
-                    TextButton(onClick = {
-                        scope.launch {
-                            uiState.selectedProfile?.let { viewModel.deleteProfile(it) }
-                            viewModel.dismissTestExpiryAlert()
-                        }
-                    }) {
-                        Text("Delete")
-                    }
-                } else {
-                    TextButton(onClick = { viewModel.dismissTestExpiryAlert() }) {
-                        Text("OK")
-                    }
+                TextButton(
+                    onClick = { viewModel.dismissServiceAlert() }  // ✅
+                ) {
+                    Text("确定")
                 }
             },
-            dismissButton = {
-                if (uiState.testExpiryMessage.contains("expired")) {
-                    TextButton(onClick = { viewModel.dismissTestExpiryAlert() }) {
-                        Text("Cancel")
-                    }
-                }
-            }
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp
         )
     }
 }
